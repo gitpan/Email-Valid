@@ -1,5 +1,10 @@
 Revision history for Perl extension Email::Valid.
 
+0.08
+	- Removed a couple of warnings when running under -w
+	- Bug handling AOL local rules fixed
+	- local_rules() now defaults to off
+
 0.07 Tue Jan 12 02:04:57 PST 1999
 	- Mail::Address module is now required
         - Added Email::Valid::NSLookup module to

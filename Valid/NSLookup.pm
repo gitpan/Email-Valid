@@ -34,7 +34,9 @@ sub lookup {
   } else {
     open OLDERR, '>&STDERR' or croak "cannot dup stderr: $!";
     open STDERR, '>&STDOUT' or croak "cannot redirect stderr to stdout: $!";
-    exec $PATH, '-query=mx', $host;
+    {
+      exec $PATH, '-query=mx', $host;
+    }
     open STDERR, ">&OLDERR";
     croak "unable to execute nslookup '$PATH': $!";
   }                         

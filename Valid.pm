@@ -6,7 +6,7 @@ use Carp;
 use UNIVERSAL;
 use Mail::Address;
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 %AUTOLOAD = ( nslookup_path => 1, nslookup_failure => 1, mxcheck => 1,
               fudge => 1, debug => 1, fully_qualified => 1,
@@ -32,7 +32,7 @@ sub _initialize {
   $self->{mxcheck}     = 0;
   $self->{fudge}       = 0;
   $self->{fqdn}        = 1;
-  $self->{local_rules} = 1;
+  $self->{local_rules} = 0;
 }            
 
 sub _rearrange {
@@ -42,6 +42,7 @@ sub _rearrange {
   my(%args);
 
   ref $self ? %args = %$self : _initialize( \%args );
+  return %args unless @params;
   
   unless ($params[0] =~ /^-/) {
     while(@params) {
@@ -125,7 +126,7 @@ sub _local_rules {
   #     - contain periods, underscores, dashes or other punctuation
   #                  
   if ($host =~ /aol\.com/i) {
-    return undef unless $user =~ /^[a-z][a-z0-9]{2,9}$/;
+    return undef unless $user =~ /^[a-zA-Z][a-zA-Z0-9]{2,9}$/;
   }
   1;  
 }
@@ -298,6 +299,8 @@ address is deliverable without attempting delivery (for details, see
 perlfaq 9).
 
 =head1 PREREQUISITES
+
+The Mail::Address module is required.
 
 Your system must have the nslookup utility in order to perform DNS checks.
 
