@@ -1,20 +1,25 @@
 DESCRIPTION
 
-  This module determines whether an e-mail address is well-formed, and
+  This module determines whether an email address is well-formed, and
   optionally, whether a mail host exists for the domain.  
 
 COPYRIGHT
 
-  Copyright (C) 1998, Maurice Aubrey <maurice@hevanet.com>. 
+  Copyright 1998-1999, Maurice Aubrey <maurice@hevanet.com>. 
+  All rights reserved.
 
   This module is free software; you may redistribute it and/or
   modify it under the same terms as Perl itself.
 
 PREREQUISITES
 
-  This module requires perl 5.004 or later, and the Mail::Address module.
+  This module requires perl 5.004 or later and the Mail::Address module.
+  The Net::DNS module is required for DNS checks.   
 
-  The nslookup utility is required if DNS lookups are desired.
+  Either the Net::DNS module or the nslookup utility are required 
+  to perform DNS checks.
+
+  Under Win32, the module tests take a very long time, so be patient.
  
 INSTALLATION
 
@@ -34,10 +39,6 @@ INSTALLATION
         make
         make test
         make install
-
-  If the tests fail, you make need to change the path to the nslookup
-  utility.  Go ahead and install the module and then read the POD to
-  determine if that is the case.
 
   Once installed, you can use the following line to load the module into
   your scripts:

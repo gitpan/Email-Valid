@@ -1,5 +1,32 @@
 Revision history for Perl extension Email::Valid.
 
+0.12 Thu Jul  8 22:26:41 PDT 1999
+	- Added details() method to determine why an
+          address check fails.  Thanks to Otis Gospodnetic
+          for the suggestion.      
+        - Global Net::DNS::Resolver object is now used for
+          DNS queries when Net::DNS is available.  Can be accessed 
+          directly to tweak the resolver behavior.
+        - The address() method now returns an additional
+          value (an instance of the Mail::Address class)
+          when called in a list context.  
+        - Updated documentation.
+
+0.11 Wed Jul  7 04:33:58 PDT 1999  
+        - Changed name to Mail::Address
+        - RELEASE WITHDRAWN PENDING DISCUSSION OF THIS NAME CHANGE
+
+0.09 Thu Apr  8 17:21:15 PDT 1999
+        - Added Mail::Address to PREREQ_PM to list
+          dependency, as suggested by Achim.
+        - Moved test.pl to t/valid.t as suggested by Achim.
+        - DNS lookups now use Net::DNS if available, falling
+          back to nslookup if not.  Suggested by
+          Lupe Christoph.
+        - Modified documentation
+        - Renamed Email::Valid::NSLookup to Email::Valid::DNS,
+          which is now responsible for all DNS queries.
+        
 0.08
 	- Removed a couple of warnings when running under -w
 	- Bug handling AOL local rules fixed

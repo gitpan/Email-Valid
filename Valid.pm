@@ -1,17 +1,25 @@
 package Email::Valid;
 
 use strict;
-use vars qw( $VERSION $RFC822PAT %AUTOLOAD $AUTOLOAD );
+use vars qw( $VERSION $RFC822PAT %AUTOLOAD $AUTOLOAD $NSLOOKUP_PAT
+             @NSLOOKUP_PATHS $Details $Resolver $Nslookup_Path 
+             $DNS_Method $Debug );
 use Carp;
 use UNIVERSAL;
+use IO::File;
 use Mail::Address;
 
-$VERSION = '0.08';
+$VERSION = '0.12';
 
-%AUTOLOAD = ( nslookup_path => 1, nslookup_failure => 1, mxcheck => 1,
-              fudge => 1, debug => 1, fully_qualified => 1,
-              special_restrictions => 1, local_rules => 1, 
-              fqdn => 1 );   
+%AUTOLOAD = ( mxcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
+$NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
+@NSLOOKUP_PATHS = qw( /usr/bin /usr/sbin /bin );
+$DNS_Method = '';
+
+# Configure a global resolver object for DNS queries 
+# if Net::DNS is available 
+eval { require Net::DNS };
+$Resolver = new Net::DNS::Resolver unless $@;
 
 sub new {
   my $class   = shift;
@@ -19,12 +27,11 @@ sub new {
   $class = ref $class || $class;
   bless my $self = {}, $class;
   $self->_initialize;
-  %$self = $self->_rearrange([qw( nslookup_path nslookup_failure
-                                  mxcheck fudge debug fully_qualified
-                                  special_restrictions local_rules
-                                  fqdn )], \@_);
+  %$self = $self->_rearrange([qw( mxcheck fudge fqdn local_rules )], \@_);
   return $self;
 }
+
+sub version { $VERSION };
 
 sub _initialize {
   my $self = shift;
@@ -33,8 +40,10 @@ sub _initialize {
   $self->{fudge}       = 0;
   $self->{fqdn}        = 1;
   $self->{local_rules} = 0;
+  $self->{details}     = $Details = undef;
 }            
 
+# Pupose: handles named parameter calling style
 sub _rearrange {
   my $self = shift;
   my(@names)  = @{ shift() };
@@ -60,64 +69,133 @@ sub _rearrange {
   %args;
 }                         
 
+# Purpose: determine why an address failed a check
+sub details {
+  my $self = shift;
+
+  return (ref $self ? $self->{details} : $Details) unless @_;
+  $Details = shift;
+  $self->{details} = $Details if ref $self;
+  return undef;
+}
+
+# Purpose: Check whether address conforms to RFC 822 syntax.
 sub rfc822 {
   my $self = shift;
   my %args = $self->_rearrange([qw( address )], \@_);
 
-  my $addr = $args{address} or return undef;
+  my $addr = $args{address} or return $self->details('rfc822');
   $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
 
-  return($addr =~ m/^$RFC822PAT$/o ? 1 : undef);
+  return $self->details('rfc822') unless $addr =~ m/^$RFC822PAT$/o;
+
+  return 1;
 }
 
+# Purpose: attempt to locate the nslookup utility 
+sub _find_nslookup {
+  my $self = shift;
+ 
+  foreach my $path (@NSLOOKUP_PATHS) {
+    return "$path/nslookup" if -x "$path/nslookup" and !-d _;
+  }
+  return undef;
+}               
+
+# Purpose: perform DNS query using the Net::DNS module
+sub _net_dns_query {
+  my $self = shift;
+  my $host = shift;
+
+  defined $Resolver or croak 'Net::DNS object does not exist!';
+
+  my $packet = $Resolver->send($host, 'A')
+    or croak $Resolver->errorstring;
+  return 1 if $packet->header->ancount;
+ 
+  $packet = $Resolver->send($host, 'MX')
+    or croak $Resolver->errorstring;
+  return 1 if $packet->header->ancount;
+ 
+  return $self->details('mx');               
+}
+
+# Purpose: perform DNS query using the nslookup utility
+sub _nslookup_query {
+  my $self = shift;
+  my $host = shift;
+  local($/, *OLDERR);
+
+  unless ($Nslookup_Path) {
+    $Nslookup_Path = $self->_find_nslookup
+      or croak 'unable to locate nslookup';
+  }
+
+  # Check for an A record
+  return 1 if gethostbyname $host;
+
+  # Check for an MX record
+  if (my $fh = new IO::File '-|') {
+    my $response = <$fh>;
+    print STDERR $response if $Debug;
+    close $fh;
+    $response =~ /$NSLOOKUP_PAT/io or return $self->details('mx');
+    return 1;
+  } else {
+    open OLDERR, '>&STDERR' or croak "cannot dup stderr: $!";
+    open STDERR, '>&STDOUT' or croak "cannot redirect stderr to stdout: $!";
+    {
+      exec $Nslookup_Path, '-query=mx', $host;
+    }
+    open STDERR, ">&OLDERR";
+    croak "unable to execute nslookup '$Nslookup_Path': $!";
+  }                                                                             
+}
+
+# Purpose: Check whether a DNS record (A or MX) exists for a domain.
 sub mx {
   my $self = shift;
   my %args = $self->_rearrange([qw( address )], \@_);
 
-  my $addr = $args{address} or return undef;
+  my $addr = $args{address} or return $self->details('mx');
   $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
 
   my $host = ($addr =~ /^.*@(.*)$/ ? $1 : $addr);
   $host =~ s/\s+//g;
-
+ 
   # REMOVE BRACKETS IF IT'S A DOMAIN-LITERAL
   #   RFC822 3.4.6
   #   Square brackets ("[" and "]") are used to indicate the
   #   presence of a domain-literal, which the appropriate
   #   name-domain is to use directly, bypassing normal
   #   name-resolution mechanisms.
-  $host =~ s/(^\[)|(\]$)//g;         
+  $host =~ s/(^\[)|(\]$)//g;              
 
-  $host or return undef;
-
-  # CHECK FOR AN A RECORD
-  my $mailhost = gethostbyname $host;
-  return 1 if defined $mailhost;     
-
-  # CHECK FOR MX RECORD
-  require Email::Valid::NSLookup;
-  return 2 if Email::Valid::NSLookup->lookup( $host );
-
-  return undef;  
+  if (!defined $Resolver or $DNS_Method eq 'nslookup') {
+    print STDERR "using nslookup for dns query\n" if $Debug;
+    return $self->_nslookup_query( $host );
+  } else {
+    print STDERR "using Net::DNS for dns query\n" if $Debug;
+    return $self->_net_dns_query( $host );
+  }
 }
 
+# Purpose: Fix common addressing errors
+# Returns: Possibly modified address
 sub _fudge {
   my $self = shift;
   my $addr = shift;
-
-  $addr or return undef;
 
   $addr =~ s/\s+//g if $addr =~ /aol\.com$/i;
   $addr =~ s/,/./g  if $addr =~ /compuserve\.com$/i;
   $addr;
 }
 
-# SPECIAL RESTRICTIONS ON A PER-DOMAIN BASIS
+# Purpose: Special address restrictions on a per-domain basis.
+# Caveats: These organizations may change their rules at any time.  
 sub _local_rules {
   my $self = shift;
-  my $addr = shift;
-
-  my($user, $host) = ($addr->user, $addr->host);
+  my($user, $host) = @_;
 
   # AOL ADDRESSING CONVENTIONS (according to their autoresponder)
   #   AOL addresses cannot:
@@ -131,34 +209,36 @@ sub _local_rules {
   1;  
 }
 
+# Purpose: Put an address through a series of checks to determine 
+#          whether it should be considered valid.
 sub address {
   my $self = shift;
-  my %args = $self->_rearrange([qw( address fudge special_restrictions
-                                    fully_qualified mxcheck nslookup_path
-                                    nslookup_failure debug fqdn 
+  my %args = $self->_rearrange([qw( address fudge mxcheck fqdn  
                                     local_rules )], \@_);
 
-  # For backwards compatibility
-  $args{fqdn}        ||= $args{fully_qualified};
-  $args{local_rules} ||= $args{special_restrictions};
-
-  my $addr = $args{address} or return undef;
+  my $addr = $args{address} or return $self->details('rfc822');
   $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
 
   $addr = $self->_fudge( $addr ) if $args{fudge};
-
-  return undef unless $self->rfc822( $addr );
+  $self->rfc822( $addr ) or return undef;
 
   ($addr) = Mail::Address->parse( $addr );
-  return undef unless $addr;
+  $addr or return $self->details('rfc822'); # This should never happen
 
-  return undef if $args{local_rules} and not $self->_local_rules( $addr );
+  if ($args{local_rules}) {
+    $self->_local_rules( $addr->user, $addr->host ) 
+      or return $self->details('local_rules');
+  }
 
-  return undef if $args{fqdn} and $addr->host !~ /^.+\..+$/;
+  if ($args{fqdn}) {
+    $addr->host =~ /^.+\..+$/ or return $self->details('fqdn');
+  }
 
-  return undef if $args{mxcheck} and not $self->mx( $addr->host );
+  if ($args{mxcheck}) {
+    $self->mx( $addr->host ) or return undef; 
+  }
 
-  return $addr->address; 
+  return (wantarray ? ($addr->address, $addr) : $addr->address);  
 }
 
 sub AUTOLOAD {
@@ -282,7 +362,7 @@ __END__
 
 =head1 NAME
 
-Email::Valid - Check validity of Internet e-mail addresses 
+Email::Valid - Check validity of Internet email addresses 
 
 =head1 SYNOPSIS
 
@@ -291,24 +371,24 @@ Email::Valid - Check validity of Internet e-mail addresses
 
 =head1 DESCRIPTION
 
-This module determines whether an e-mail address is well-formed, and
+This module determines whether an email address is well-formed, and
 optionally, whether a mail host exists for the domain.
 
-Please note that there is no way to definitely determine whether an
+Please note that there is no way to determine whether an
 address is deliverable without attempting delivery (for details, see
 perlfaq 9).
 
 =head1 PREREQUISITES
 
-The Mail::Address module is required.
-
-Your system must have the nslookup utility in order to perform DNS checks.
+This module requires perl 5.004 or later and the Mail::Address module.
+Either the Net::DNS module or the nslookup utility is required
+for DNS checks.
 
 =head1 METHODS
 
   Every method which accepts an <ADDRESS> parameter may
   be passed either a string or an instance of the Mail::Address
-  class.
+  class.  All errors raise an exception.
 
 =over 4
 
@@ -328,19 +408,23 @@ individual methods below of details.
 
 =item mx ( <ADDRESS>|<DOMAIN> )
 
-This method accepts an e-mail address or domain name, and determines
-whether a DNS records (A or MX record) exists for the domain.
+This method accepts an email address or domain name and determines
+whether a DNS record (A or MX) exists for it.
 
-The method returns true if a record is found, or undef if no record
-is found or an error is encountered.
+The method returns true if a record is found and undef if not.
 
-DNS queries are currently performed using the 'nslookup' utility.  
+Either the Net::DNS module or the nslookup utility is required for
+DNS checks.  Using Net::DNS is the preferred method since error
+handling is improved.  If Net::DNS is available, you can modify
+the behavior of the resolver (e.g. change the default tcp_timeout
+value) by manipulating the global Net::DNS::Resolver instance stored in
+$Email::Valid::Resolver.     
 
 =item rfc822 ( <ADDRESS> )
 
 This method determines whether an address conforms to the RFC822
 specification (except for nested comments).  It returns true if it
-conforms, and undef if not.
+conforms and undef if not.
 
 =item fudge ( <TRUE>|<FALSE> )
 
@@ -358,7 +442,7 @@ qualified domain name (FQDN).  The default is true.
 
 Specifies whether addresses passed to address() should be tested
 for domain specific restrictions.  Currently, this is limited to
-certain AOL restrictions that I'm aware of.  The default is true.
+certain AOL restrictions that I'm aware of.  The default is false.
 
 =item mxcheck ( <TRUE>|<FALSE> )
 
@@ -367,11 +451,26 @@ for a valid DNS entry.  The default is false.
 
 =item address ( <ADDRESS> )
 
-This is the primary method, which determines whether an e-mail 
+This is the primary method which determines whether an email 
 address is valid.  It's behavior is modified by the values of
-mxcheck(), local_rules(), fqdn(), and fudge().  If the address passes
-all checks, the (possibly modified) address is returned.  If the
-address does not pass a check, the undefined value is returned.
+mxcheck(), local_rules(), fqdn(), and fudge().  If the address
+passes all checks, the (possibly modified) address is returned as
+a string.  Otherwise, the undefined value is returned.
+In a list context, the method also returns an instance of the
+Mail::Address class representing the email address.
+
+=item details ()
+
+If the last call to address() returned undef, you can call this
+method to determine why it failed.  Possible values are:
+
+ rfc822
+ local_rules
+ fqdn
+ mxcheck  
+
+If the class is not instantiated, you can get the same information
+from the global $Email::Valid::Details.  
 
 =back
 
@@ -390,27 +489,57 @@ Additionally, let's make sure there's a mail host for it:
 Let's see an example of how the address may be modified:
 
   $addr = Email::Valid->address('Alfred Neuman <Neuman @ foo.bar>');
-  print "$addr\n"; # prints Neuman@foo.bar
+  print "$addr\n"; # prints Neuman@foo.bar 
+
+Need to determine why an address failed?
+
+  unless(Email::Valid->address('maurice@hevanet')) {
+    print "address failed $Email::Valid::Details check.\n";
+  }
+
+If an error is encountered, an exception is raised.  This is really
+only possible when performing DNS queries.  Trap any exceptions by
+wrapping the call in an eval block: 
+
+  eval {
+    $addr = Email::Valid->address( -address => 'maurice@hevanet.com',
+                                   -mxcheck => 1 );
+  };
+  warn "an error was encountered: $@" if $@; 
 
 =head1 BUGS
 
-Other methods of performing DNS queries should be implemented, to increase
-portability.
+Email::Valid should work with Perl for Win32.  In my experience,
+however, Net::DNS queries seem to take an extremely long time when
+a record cannot be found.
 
 =head1 AUTHOR
 
-Copyright (C) 1998 Maurice Aubrey E<lt>maurice@hevanet.comE<gt>. 
+Copyright 1998-1999, Maurice Aubrey E<lt>maurice@hevanet.comE<gt>. 
+All rights reserved.
 
 This module is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+=head1 CREDITS
 
 Significant portions of this module are based on the ckaddr program
 written by Tom Christiansen and the RFC822 address pattern developed
 by Jeffrey Friedl.  Neither were involved in the construction of this 
 module; all errors are mine.
 
+Thanks very much to the following people for their suggestions and
+bug fixes:
+
+  Otis Gospodnetic <otis@DOMINIS.com>
+  Kim Ryan <kimaryan@ozemail.com.au>
+  Pete Ehlke <pde@listserv.music.sony.com> 
+  Lupe Christoph
+  David Birnbaum
+  Achim
+
 =head1 SEE ALSO
 
-perl(1).
+Mail::Address, Net::DNS, perlfaq9
 
 =cut

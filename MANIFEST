@@ -1,7 +1,6 @@
 Changes
 Valid.pm
-Valid/NSLookup.pm
 README
 MANIFEST
 Makefile.PL
-test.pl
+t/valid.t
