@@ -1,5 +1,9 @@
 Revision history for Perl extension Email::Valid.
 
+0.14 Wed Jul  3 12:58:50 CEST 2002
+        - Applied patch from Michael G Schwern <schwern@pobox.com>
+          to remove 'use UNIVERSAL'.
+   
 0.13 Tue Jan 16 13:25:57 PST 2001    
         - Only load Net::DNS module if required
 

@@ -5,11 +5,10 @@ use vars qw( $VERSION $RFC822PAT %AUTOLOAD $AUTOLOAD $NSLOOKUP_PAT
              @NSLOOKUP_PATHS $Details $Resolver $Nslookup_Path 
              $DNS_Method $Debug );
 use Carp;
-use UNIVERSAL;
 use IO::File;
 use Mail::Address;
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 %AUTOLOAD = ( mxcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
