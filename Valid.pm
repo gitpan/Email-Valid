@@ -3,17 +3,21 @@ package Email::Valid;
 use strict;
 use vars qw( $VERSION $RFC822PAT %AUTOLOAD $AUTOLOAD $NSLOOKUP_PAT
              @NSLOOKUP_PATHS $Details $Resolver $Nslookup_Path 
-             $DNS_Method $Debug );
+             $DNS_Method $TLD $Debug );
 use Carp;
 use IO::File;
 use Mail::Address;
+use File::Spec;
 
-$VERSION = '0.14';
+$VERSION = '0.15';
 
-%AUTOLOAD = ( mxcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
+%AUTOLOAD = ( mxcheck => 1, tldcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
-@NSLOOKUP_PATHS = qw( /usr/bin /usr/sbin /bin );
-$DNS_Method = '';
+@NSLOOKUP_PATHS = File::Spec->path();
+
+# initialize if already loaded, better in prefork mod_perl environment
+$DNS_Method = defined $Net::DNS::VERSION ? 'Net::DNS' : '';
+$TLD = Net::Domain::TLD->new if defined $Net::Domain::TLD::VERSION;
 
 sub new {
   my $class   = shift;
@@ -21,16 +25,15 @@ sub new {
   $class = ref $class || $class;
   bless my $self = {}, $class;
   $self->_initialize;
-  %$self = $self->_rearrange([qw( mxcheck fudge fqdn local_rules )], \@_);
+  %$self = $self->_rearrange([qw( mxcheck tldcheck fudge fqdn local_rules )], \@_);
   return $self;
 }
-
-sub version { $VERSION };
 
 sub _initialize {
   my $self = shift;
 
   $self->{mxcheck}     = 0;
+  $self->{tldcheck}    = 0;
   $self->{fudge}       = 0;
   $self->{fqdn}        = 1;
   $self->{local_rules} = 0;
@@ -90,8 +93,11 @@ sub rfc822 {
 sub _find_nslookup {
   my $self = shift;
  
+  my $ns = 'nslookup';
+  $ns .= '.exe' if $^O =~ /win32/i;
   foreach my $path (@NSLOOKUP_PATHS) {
-    return "$path/nslookup" if -x "$path/nslookup" and !-d _;
+    my $file = File::Spec->catfile($path, $ns);
+    return $file if -x $file and !-d _;
   }
   return undef;
 }               
@@ -112,12 +118,10 @@ sub _net_dns_query {
 
   $Resolver = Net::DNS::Resolver->new unless defined $Resolver; 
 
-  my $packet = $Resolver->send($host, 'A')
-    or croak $Resolver->errorstring;
+  my $packet = $Resolver->send($host, 'A') or croak $Resolver->errorstring;
   return 1 if $packet->header->ancount;
  
-  $packet = $Resolver->send($host, 'MX')
-    or croak $Resolver->errorstring;
+  $packet = $Resolver->send($host, 'MX') or croak $Resolver->errorstring;
   return 1 if $packet->header->ancount;
  
   return $self->details('mx');               
@@ -155,24 +159,27 @@ sub _nslookup_query {
   }                                                                             
 }
 
+# Purpose: Check whether a top level domain is valid for a domain.
+sub tld {
+  my $self = shift;
+  my %args = $self->_rearrange([qw( address )], \@_);
+
+  if (!defined $TLD) {
+    require Net::Domain::TLD;
+    $TLD = Net::Domain::TLD->new;
+  }
+
+  my $host = $self->_host( $args{address} or return $self->details('tld') );
+  $host =~ m#\.(\w+)$#;
+  $TLD->exists( $1 );
+} 
+
 # Purpose: Check whether a DNS record (A or MX) exists for a domain.
 sub mx {
   my $self = shift;
   my %args = $self->_rearrange([qw( address )], \@_);
 
-  my $addr = $args{address} or return $self->details('mx');
-  $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
-
-  my $host = ($addr =~ /^.*@(.*)$/ ? $1 : $addr);
-  $host =~ s/\s+//g;
- 
-  # REMOVE BRACKETS IF IT'S A DOMAIN-LITERAL
-  #   RFC822 3.4.6
-  #   Square brackets ("[" and "]") are used to indicate the
-  #   presence of a domain-literal, which the appropriate
-  #   name-domain is to use directly, bypassing normal
-  #   name-resolution mechanisms.
-  $host =~ s/(^\[)|(\]$)//g;              
+  my $host = $self->_host($args{address}) or return $self->details('mx');
 
   $self->_select_dns_method unless $DNS_Method;
 
@@ -185,6 +192,28 @@ sub mx {
   } else {
     croak "unknown DNS method '$DNS_Method'";
   }
+}
+
+# Purpose: convert address to host
+# Returns: host
+
+sub _host {
+  my $self = shift;
+  my $addr = shift;
+
+  $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
+
+  my $host = ($addr =~ /^.*@(.*)$/ ? $1 : $addr);
+  $host =~ s/\s+//g;
+ 
+  # REMOVE BRACKETS IF IT'S A DOMAIN-LITERAL
+  #   RFC822 3.4.6
+  #   Square brackets ("[" and "]") are used to indicate the
+  #   presence of a domain-literal, which the appropriate
+  #   name-domain is to use directly, bypassing normal
+  #   name-resolution mechanisms.
+  $host =~ s/(^\[)|(\]$)//g;              
+  $host;
 }
 
 # Purpose: Fix common addressing errors
@@ -204,14 +233,15 @@ sub _local_rules {
   my $self = shift;
   my($user, $host) = @_;
 
-  # AOL ADDRESSING CONVENTIONS (according to their autoresponder)
-  #   AOL addresses cannot:
-  #     - be shorter than 3 or longer than 10 characters
-  #     - begin with numerals
-  #     - contain periods, underscores, dashes or other punctuation
-  #                  
+  # AOL addresses cannot:
+  #     - Be shorter than 3 or longer than 16 characters
+  #     - Begin with numerals
+  #     - Contain periods, underscores, dashes or other punctuation characters
+  #
+  # http://postmaster.info.aol.com/faq.html
+  # Last updated: Aug 23, 2003
   if ($host =~ /aol\.com/i) {
-    return undef unless $user =~ /^[a-zA-Z][a-zA-Z0-9]{2,9}$/;
+    return undef unless $user =~ /^[a-zA-Z][a-zA-Z0-9]{2,15}$/;
   }
   1;  
 }
@@ -220,7 +250,7 @@ sub _local_rules {
 #          whether it should be considered valid.
 sub address {
   my $self = shift;
-  my %args = $self->_rearrange([qw( address fudge mxcheck fqdn  
+  my %args = $self->_rearrange([qw( address fudge mxcheck tldcheck fqdn  
                                     local_rules )], \@_);
 
   my $addr = $args{address} or return $self->details('rfc822');
@@ -242,7 +272,11 @@ sub address {
   }
 
   if ($args{mxcheck}) {
-    $self->mx( $addr->host ) or return undef; 
+    $self->mx( $addr->host ) or return;
+  }
+
+  if ($args{tldcheck}) {
+    $self->tld( $addr->host ) or return;
   }
 
   return (wantarray ? ($addr->address, $addr) : $addr->address);  
@@ -389,7 +423,8 @@ perlfaq 9).
 
 This module requires perl 5.004 or later and the Mail::Address module.
 Either the Net::DNS module or the nslookup utility is required
-for DNS checks.
+for DNS checks.  The Net::Domain::TLD module is required to check the
+validity of top level domains.
 
 =head1 METHODS
 
@@ -409,6 +444,7 @@ The following named parameters are allowed.  See the
 individual methods below of details.
 
  -mxcheck
+ -tldcheck
  -fudge
  -fqdn
  -local_rules
@@ -456,11 +492,16 @@ certain AOL restrictions that I'm aware of.  The default is false.
 Specifies whether addresses passed to address() should be checked
 for a valid DNS entry.  The default is false.
 
+=item tldcheck ( <TRUE>|<FALSE> )
+
+Specifies whether addresses passed to address() should be checked
+for a valid top level domains.  The default is false.
+
 =item address ( <ADDRESS> )
 
 This is the primary method which determines whether an email 
 address is valid.  It's behavior is modified by the values of
-mxcheck(), local_rules(), fqdn(), and fudge().  If the address
+mxcheck(), tldcheck(), local_rules(), fqdn(), and fudge().  If the address
 passes all checks, the (possibly modified) address is returned as
 a string.  Otherwise, the undefined value is returned.
 In a list context, the method also returns an instance of the
@@ -475,6 +516,7 @@ method to determine why it failed.  Possible values are:
  local_rules
  fqdn
  mxcheck  
+ tldcheck
 
 If the class is not instantiated, you can get the same information
 from the global $Email::Valid::Details.  
@@ -497,6 +539,12 @@ Let's see an example of how the address may be modified:
 
   $addr = Email::Valid->address('Alfred Neuman <Neuman @ foo.bar>');
   print "$addr\n"; # prints Neuman@foo.bar 
+
+Now let's add the check for top level domains:
+
+  $addr = Email::Valid->address( -address => 'Neuman@foo.bar',
+                                 -tldcheck => 1 );
+  print "$addr\n"; # doesn't print anything
 
 Need to determine why an address failed?
 
@@ -522,7 +570,7 @@ a record cannot be found.
 
 =head1 AUTHOR
 
-Copyright 1998-1999, Maurice Aubrey E<lt>maurice@hevanet.comE<gt>. 
+Copyright 1998-2003, Maurice Aubrey E<lt>maurice@hevanet.comE<gt>. 
 All rights reserved.
 
 This module is free software; you may redistribute it and/or
@@ -544,9 +592,10 @@ bug fixes:
   Lupe Christoph
   David Birnbaum
   Achim
+  Elizabeth Mattijsen (liz@dijkmat.nl)
 
 =head1 SEE ALSO
 
-Mail::Address, Net::DNS, perlfaq9
+Mail::Address, Net::DNS, Net::Domain::TLD, perlfaq9
 
 =cut

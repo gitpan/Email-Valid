@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..10\n"; }
+BEGIN { $| = 1; print "1..12\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Email::Valid;
 $loaded = 1;
@@ -47,3 +47,13 @@ $v->address( -address => 'blort@aol.com',
              -mxcheck => 1) ? ok : not_ok;
 $v->address( -address => 'blort@notarealdomainfoo.com',
              -mxcheck => 1) ? not_ok : ok;   
+
+eval {require Net::Domain::TLD};
+if ($@) {
+    ok; ok;
+} else {
+    $v->address( -address => 'blort@notarealdomainfoo.com',
+                 -tldcheck => 1) ? ok : not_ok;   
+    $v->address( -address => 'blort@notarealdomainfoo.bla',
+                 -tldcheck => 1) ? not_ok : ok;   
+}

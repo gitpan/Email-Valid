@@ -1,5 +1,13 @@
 Revision history for Perl extension Email::Valid.
 
+0.15 Sun Sep  7 21:39:12 PDT 2003
+        - Support for top level domain validity check added by Elizabeth
+          Mattijsen (liz@dijkmat.nl).  Updated documentation and added tests.
+        - Patch to improve portability when looking
+          for nslookup executable.  Thanks to Chromatic<chromatic@wgz.org>
+        - Update AOL rules in local_rules check thanks to
+          Paul Fierro <pablo@nothing.com>
+
 0.14 Wed Jul  3 12:58:50 CEST 2002
         - Applied patch from Michael G Schwern <schwern@pobox.com>
           to remove 'use UNIVERSAL'.

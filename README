@@ -1,11 +1,12 @@
 DESCRIPTION
 
   This module determines whether an email address is well-formed, and
-  optionally, whether a mail host exists for the domain.  
+  optionally, whether a mail host exists for the domain or whether
+  the top level domain of the email address is valid.  
 
 COPYRIGHT
 
-  Copyright 1998-1999, Maurice Aubrey <maurice@hevanet.com>. 
+  Copyright 1998-2003, Maurice Aubrey <maurice@hevanet.com>. 
   All rights reserved.
 
   This module is free software; you may redistribute it and/or
@@ -18,6 +19,9 @@ PREREQUISITES
 
   Either the Net::DNS module or the nslookup utility are required 
   to perform DNS checks.
+
+  The Net::Domain::TLD module is required to check validity of top level
+  domains.
 
   Under Win32, the module tests take a very long time, so be patient.
  
