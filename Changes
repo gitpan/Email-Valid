@@ -1,0 +1,26 @@
+Revision history for Perl extension Email::Valid.
+
+0.07 Tue Jan 12 02:04:57 PST 1999
+	- Mail::Address module is now required
+        - Added Email::Valid::NSLookup module to
+          encapsulate DNS lookups -- now we can
+          add additional classes to use other utilities.
+        - Fixed problem with spaces thanks to David Birnbaum.
+        - Renamed a couple of the parameters -- old names
+          should still work.
+
+0.06 Tue May 26 14:27:34 1998
+        - Modified named parameter parsing
+
+0.05  Mon May 11 00:56:00 1998
+        - fudge() now defaults to false
+        - Modified documentation
+        - Changed behavior of fully_qualified
+
+0.04  Thu May  7 16:42:00 1998
+        - Added support for Mail::Address objects
+        - Added positional/named parameter calling style
+        - Updated documentation
+
+0.01  Fri Mar  6 22:19:54 1998
+        - original version; created by h2xs 1.18      
