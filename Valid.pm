@@ -9,17 +9,12 @@ use UNIVERSAL;
 use IO::File;
 use Mail::Address;
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 %AUTOLOAD = ( mxcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
 @NSLOOKUP_PATHS = qw( /usr/bin /usr/sbin /bin );
 $DNS_Method = '';
-
-# Configure a global resolver object for DNS queries 
-# if Net::DNS is available 
-eval { require Net::DNS };
-$Resolver = new Net::DNS::Resolver unless $@;
 
 sub new {
   my $class   = shift;
@@ -102,12 +97,21 @@ sub _find_nslookup {
   return undef;
 }               
 
+sub _select_dns_method {
+  # Configure a global resolver object for DNS queries
+  # if Net::DNS is available
+  eval { require Net::DNS };
+  return $DNS_Method = 'Net::DNS' unless $@;
+ 
+  $DNS_Method = 'nslookup';
+}
+
 # Purpose: perform DNS query using the Net::DNS module
 sub _net_dns_query {
   my $self = shift;
   my $host = shift;
 
-  defined $Resolver or croak 'Net::DNS object does not exist!';
+  $Resolver = Net::DNS::Resolver->new unless defined $Resolver; 
 
   my $packet = $Resolver->send($host, 'A')
     or croak $Resolver->errorstring;
@@ -171,12 +175,16 @@ sub mx {
   #   name-resolution mechanisms.
   $host =~ s/(^\[)|(\]$)//g;              
 
-  if (!defined $Resolver or $DNS_Method eq 'nslookup') {
+  $self->_select_dns_method unless $DNS_Method;
+
+  if ($DNS_Method eq 'Net::DNS') {
+    print STDERR "using Net::DNS for dns query\n" if $Debug;
+    return $self->_net_dns_query( $host );
+  } elsif ($DNS_Method eq 'nslookup') {
     print STDERR "using nslookup for dns query\n" if $Debug;
     return $self->_nslookup_query( $host );
   } else {
-    print STDERR "using Net::DNS for dns query\n" if $Debug;
-    return $self->_net_dns_query( $host );
+    croak "unknown DNS method '$DNS_Method'";
   }
 }
 

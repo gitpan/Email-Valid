@@ -1,5 +1,8 @@
 Revision history for Perl extension Email::Valid.
 
+0.13 Tue Jan 16 13:25:57 PST 2001    
+        - Only load Net::DNS module if required
+
 0.12 Thu Jul  8 22:26:41 PDT 1999
 	- Added details() method to determine why an
           address check fails.  Thanks to Otis Gospodnetic
