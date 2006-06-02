@@ -1,6 +1,7 @@
 Changes
-Valid.pm
+lib/Email/Valid.pm
 README
 MANIFEST
 Makefile.PL
 t/valid.t
+META.yml                                 Module meta-data (added by MakeMaker)

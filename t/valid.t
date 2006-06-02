@@ -1,59 +1,75 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl test.pl'
+#!perl
+use strict;
 
-######################### We start with some black magic to print on failure.
+use Test::More tests => 12;
 
-# Change 1..1 below to 1..last_test_to_print .
-# (It may become useful if the test is moved to ./t subdirectory.)
+BEGIN {
+  use_ok('Email::Valid');
+}
 
-BEGIN { $| = 1; print "1..12\n"; }
-END {print "not ok 1\n" unless $loaded;}
-use Email::Valid;
-$loaded = 1;
-print "ok 1\n";
+my $v = Email::Valid->new;
 
-######################### End of black magic.
+ok(
+  ! $v->address('Alfred Neuman <Neuman@BBN-TENEXA>'),
+  'Alfred Neuman <Neuman@BBN-TENEXA>',
+);
 
-# Insert your test code below (better if it prints "ok 13"
-# (correspondingly "not ok 13") depending on the success of chunk 13
-# of the test code):
+ok(
+  $v->address( -address => 'Alfred Neuman <Neuman@BBN-TENEXA>', -fqdn    => 0),
+  'Alfred Neuman <Neuman@BBN-TENEXA> { -fqdn => 0 }',
+);
 
-$test = 2;
-my $v = new Email::Valid;
+is(
+  $v->address( -address => 'first last@aol.com', -fudge   => 1),
+  'firstlast@aol.com',
+  "spaces fudged out of an address local-part",
+);
 
-sub not_ok { print "not ok $test\n"; $test++ }
-sub ok { print "ok $test\n"; $test++ }
+ok(
+  ! $v->address( -address => 'first last@aol.com', -fudge   => 0),
+  "spaces in localpart is not valid when not fudging",
+);
 
-$v->address('Alfred Neuman <Neuman@BBN-TENEXA>') ? not_ok : ok;
+is($v->details, 'rfc822', "details are rfc822");
 
-$v->address( -address => 'Alfred Neuman <Neuman@BBN-TENEXA>',
-             -fqdn    => 0) ? ok : not_ok;
-
-my $a = $v->address( -address => 'first last@aol.com',
-                     -fudge   => 1);
-$a eq 'firstlast@aol.com' ? ok : not_ok;
-
-$v->address( -address => 'first last@aol.com',
-             -fudge   => 0) ? not_ok : ok;
-$v->details eq 'rfc822' ? ok : not_ok;
-
-$a = $v->address('foo @ foo.com');
-$a eq 'foo@foo.com' ? ok : not_ok;
+is(
+  $v->address('foo @ foo.com'),
+  'foo@foo.com',
+  "spaced out address is squished"
+);
  
-$a = $v->address("fred&barney\@stonehenge(yup, the rock place).(that's dot)com");
-$a eq 'fred&barney@stonehenge.com' ? ok : not_ok;   
+is(
+  $v->address(q{fred&barney@stonehenge(yup, the rock place).(that's dot)com}),
+  'fred&barney@stonehenge.com',
+  "comments nicely dropped from an address",
+);
 
-$v->address( -address => 'blort@aol.com',
-             -mxcheck => 1) ? ok : not_ok;
-$v->address( -address => 'blort@notarealdomainfoo.com',
-             -mxcheck => 1) ? not_ok : ok;   
+SKIP: {
+  skip "your dns appears missing or failing to resolve", 2
+    unless $v->address(-address=> 'devnull@pobox.com', -mxcheck => 1);
 
-eval {require Net::Domain::TLD};
-if ($@) {
-    ok; ok;
-} else {
-    $v->address( -address => 'blort@notarealdomainfoo.com',
-                 -tldcheck => 1) ? ok : not_ok;   
-    $v->address( -address => 'blort@notarealdomainfoo.bla',
-                 -tldcheck => 1) ? not_ok : ok;   
+  ok(
+    $v->address(-address => 'blort@aol.com', -mxcheck => 1),
+    'blort@aol.com, with mxcheck, is ok',
+  );
+
+  ok(
+    !$v->address(-address => 'blort@will-never-exist.pobox.com', -mxcheck => 1),
+    'blort@will-never-exist.pobox.com, with mxcheck, is invalid',
+  );
+}
+
+SKIP: {
+  skip "tests require Net::Domain::TLD", 2
+    unless eval { require Net::Domain::TLD; 1; };
+
+  ok(
+    $v->address( -address => 'blort@notarealdomainfoo.com', -tldcheck => 1),
+    'blort@notarealdomainfoo.com is ok with tldcheck',
+  );
+
+  ok(
+    ! $v->address( -address => 'blort@notarealdomainfoo.bla', -tldcheck => 1),
+    'blort@notarealdomainfoo.bla is not ok with tldcheck',
+  );
 }

@@ -1,5 +1,11 @@
 Revision history for Perl extension Email::Valid.
 
+0.16 Fri Jun  2
+        - maintainership assumed by RJBS
+        - work with current, broken Net::Domain::TLD
+        - improve tests
+
+
 0.15 Sun Sep  7 21:39:12 PDT 2003
         - Support for top level domain validity check added by Elizabeth
           Mattijsen (liz@dijkmat.nl).  Updated documentation and added tests.

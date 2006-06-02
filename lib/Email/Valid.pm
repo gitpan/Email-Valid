@@ -9,7 +9,7 @@ use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 %AUTOLOAD = ( mxcheck => 1, tldcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
@@ -17,7 +17,6 @@ $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
 
 # initialize if already loaded, better in prefork mod_perl environment
 $DNS_Method = defined $Net::DNS::VERSION ? 'Net::DNS' : '';
-$TLD = Net::Domain::TLD->new if defined $Net::Domain::TLD::VERSION;
 
 sub new {
   my $class   = shift;
@@ -164,14 +163,13 @@ sub tld {
   my $self = shift;
   my %args = $self->_rearrange([qw( address )], \@_);
 
-  if (!defined $TLD) {
-    require Net::Domain::TLD;
-    $TLD = Net::Domain::TLD->new;
+  unless (eval { require Net::Domain::TLD; 1 }) {
+    die "Net::Domain::TLD not available";
   }
 
   my $host = $self->_host( $args{address} or return $self->details('tld') );
-  $host =~ m#\.(\w+)$#;
-  $TLD->exists( $1 );
+  my ($tld) = $host =~ m#\.(\w+)$#;
+  return Net::Domain::TLD::tld_exists($tld);
 } 
 
 # Purpose: Check whether a DNS record (A or MX) exists for a domain.
