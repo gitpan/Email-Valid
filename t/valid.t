@@ -1,7 +1,7 @@
 #!perl
 use strict;
 
-use Test::More tests => 12;
+use Test::More tests => 16;
 
 BEGIN {
   use_ok('Email::Valid');
@@ -44,6 +44,21 @@ is(
   "comments nicely dropped from an address",
 );
 
+ok(
+  $v->address('somebody@ example.com'),
+  "space between @ and domain is valid",
+);
+
+ok(
+  $v->address('-dashy@example.net'),
+  'an email can start with a dash',
+);
+
+ok(
+  $v->address(-address => '-dashy@example.net'),
+  'an email can start with a dash (alternate calling method)',
+);
+
 SKIP: {
   skip "your dns appears missing or failing to resolve", 2
     unless $v->address(-address=> 'devnull@pobox.com', -mxcheck => 1);
@@ -63,13 +78,17 @@ SKIP: {
   skip "tests require Net::Domain::TLD", 2
     unless eval { require Net::Domain::TLD; 1; };
 
+  my $v = Email::Valid->new;
+
   ok(
-    $v->address( -address => 'blort@notarealdomainfoo.com', -tldcheck => 1),
+    $v->address( -address => 'blort@notarealdomainfoo.com', -mxcheck => 0, -tldcheck => 1),
     'blort@notarealdomainfoo.com is ok with tldcheck',
   );
 
   ok(
-    ! $v->address( -address => 'blort@notarealdomainfoo.bla', -tldcheck => 1),
+    ! $v->address( -address => 'blort@notarealdomainfoo.bla', -mxcheck => 0, -tldcheck => 1),
     'blort@notarealdomainfoo.bla is not ok with tldcheck',
   );
+
+  is($v->details, 'tldcheck', "it was the tldcheck that broke this email");
 }

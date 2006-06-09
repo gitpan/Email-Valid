@@ -9,9 +9,16 @@ use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.16';
+$VERSION = '0.170';
 
-%AUTOLOAD = ( mxcheck => 1, tldcheck => 1, fudge => 1, fqdn => 1, local_rules => 1 );
+%AUTOLOAD = (
+  fqdn     => 1,
+  fudge    => 1,
+  mxcheck  => 1,
+  tldcheck => 1,
+  local_rules => 1,
+);
+
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
 @NSLOOKUP_PATHS = File::Spec->path();
 
@@ -24,7 +31,7 @@ sub new {
   $class = ref $class || $class;
   bless my $self = {}, $class;
   $self->_initialize;
-  %$self = $self->_rearrange([qw( mxcheck tldcheck fudge fqdn local_rules )], \@_);
+  %$self = $self->_rearrange([ keys %AUTOLOAD ], \@_);
   return $self;
 }
 
@@ -49,7 +56,7 @@ sub _rearrange {
   ref $self ? %args = %$self : _initialize( \%args );
   return %args unless @params;
   
-  unless ($params[0] =~ /^-/) {
+  unless ($params[0] =~ /^-/ and @params > 1) {
     while(@params) {
       croak 'unexpected number of parameters' unless @names;
       $args{ lc shift @names } = shift @params;
@@ -141,21 +148,34 @@ sub _nslookup_query {
   return 1 if gethostbyname $host;
 
   # Check for an MX record
-  if (my $fh = new IO::File '-|') {
-    my $response = <$fh>;
+  if ($^O eq 'MSWin32' or $^O eq 'Cygwin') {
+    # Oh no, we're on Windows!
+    require IO::CaptureOutput;
+    my $response = IO::CaptureOutput::capture_exec(
+     $Nslookup_Path, '-query=mx', $host
+    );
+    croak "unable to execute nslookup '$Nslookup_Path': exit $?" if $?;
     print STDERR $response if $Debug;
-    close $fh;
     $response =~ /$NSLOOKUP_PAT/io or return $self->details('mx');
     return 1;
   } else {
-    open OLDERR, '>&STDERR' or croak "cannot dup stderr: $!";
-    open STDERR, '>&STDOUT' or croak "cannot redirect stderr to stdout: $!";
-    {
-      exec $Nslookup_Path, '-query=mx', $host;
-    }
-    open STDERR, ">&OLDERR";
-    croak "unable to execute nslookup '$Nslookup_Path': $!";
-  }                                                                             
+    # phew, we're not on Windows!
+    if (my $fh = new IO::File '-|') {
+      my $response = <$fh>;
+      print STDERR $response if $Debug;
+      close $fh;
+      $response =~ /$NSLOOKUP_PAT/io or return $self->details('mx');
+      return 1;
+    } else {
+      open OLDERR, '>&STDERR' or croak "cannot dup stderr: $!";
+      open STDERR, '>&STDOUT' or croak "cannot redirect stderr to stdout: $!";
+      {
+        exec $Nslookup_Path, '-query=mx', $host;
+      }
+      open STDERR, ">&OLDERR";
+      croak "unable to execute nslookup '$Nslookup_Path': $!";
+    }                                                                             
+  }
 }
 
 # Purpose: Check whether a top level domain is valid for a domain.
@@ -163,7 +183,7 @@ sub tld {
   my $self = shift;
   my %args = $self->_rearrange([qw( address )], \@_);
 
-  unless (eval { require Net::Domain::TLD; 1 }) {
+  unless (eval {require Net::Domain::TLD; Net::Domain::TLD->VERSION(1.65); 1}) {
     die "Net::Domain::TLD not available";
   }
 
@@ -255,9 +275,10 @@ sub address {
   $addr = $addr->address if UNIVERSAL::isa($addr, 'Mail::Address');
 
   $addr = $self->_fudge( $addr ) if $args{fudge};
-  $self->rfc822( $addr ) or return undef;
+  $self->rfc822( -address => $addr ) or return undef;
 
   ($addr) = Mail::Address->parse( $addr );
+
   $addr or return $self->details('rfc822'); # This should never happen
 
   if ($args{local_rules}) {
@@ -270,11 +291,13 @@ sub address {
   }
 
   if ($args{mxcheck}) {
-    $self->mx( $addr->host ) or return;
+    # I'm not sure this ->details call is needed, but I'll test for it later.
+    # The whole ->details thing is... weird. -- rjbs, 2006-06-08
+    $self->mx( $addr->host ) or return $self->details('mxcheck');
   }
 
   if ($args{tldcheck}) {
-    $self->tld( $addr->host ) or return;
+    $self->tld( $addr->host ) or return $self->details('tldcheck');
   }
 
   return (wantarray ? ($addr->address, $addr) : $addr->address);  
