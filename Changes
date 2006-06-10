@@ -1,5 +1,8 @@
 Revision history for Perl extension Email::Valid.
 
+0.171   Sat Jun 10 2006
+        fixed a problem with the test plan
+
 0.170   Thu Jun  8 2006
         fix details on failures for mxcheck and tldcheck
         don't screw up addresses beginning with a dash

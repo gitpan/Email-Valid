@@ -75,7 +75,7 @@ SKIP: {
 }
 
 SKIP: {
-  skip "tests require Net::Domain::TLD", 2
+  skip "tests require Net::Domain::TLD", 3
     unless eval { require Net::Domain::TLD; 1; };
 
   my $v = Email::Valid->new;
