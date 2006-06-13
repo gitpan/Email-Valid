@@ -1,5 +1,8 @@
 Revision history for Perl extension Email::Valid.
 
+0.172   Sat Jun 10 2006
+        add pod tests
+
 0.171   Sat Jun 10 2006
         fixed a problem with the test plan
 

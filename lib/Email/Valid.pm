@@ -9,7 +9,7 @@ use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.171';
+$VERSION = '0.172';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -483,6 +483,11 @@ handling is improved.  If Net::DNS is available, you can modify
 the behavior of the resolver (e.g. change the default tcp_timeout
 value) by manipulating the global Net::DNS::Resolver instance stored in
 $Email::Valid::Resolver.     
+
+=item tld ( <ADDRESS> )
+
+This method determines whether the domain part of an address is in a recognized
+top-level domain.
 
 =item rfc822 ( <ADDRESS> )
 
