@@ -1,5 +1,8 @@
 Revision history for Perl extension Email::Valid.
 
+0.173   Fri Jun 17 2006
+        update test to require same min. version of TLD.pm as code
+
 0.172   Sat Jun 10 2006
         add pod tests
 
