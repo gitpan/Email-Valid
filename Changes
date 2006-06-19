@@ -1,5 +1,8 @@
 Revision history for Perl extension Email::Valid.
 
+0.174   Fri Jun 17 2006
+        added module required on Win32 (IO::CaptureOutput) to Makefile.PL
+
 0.173   Fri Jun 17 2006
         update test to require same min. version of TLD.pm as code
 
