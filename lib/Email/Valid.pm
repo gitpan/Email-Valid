@@ -9,7 +9,7 @@ use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.174';
+$VERSION = '0.175';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -100,9 +100,9 @@ sub _find_nslookup {
   my $self = shift;
  
   my $ns = 'nslookup';
-  $ns .= '.exe' if $^O =~ /win32/i;
   foreach my $path (@NSLOOKUP_PATHS) {
     my $file = File::Spec->catfile($path, $ns);
+    return "$file.exe" if ($^O eq 'MSWin32') and -x "$file.exe" and !-d _;
     return $file if -x $file and !-d _;
   }
   return undef;
