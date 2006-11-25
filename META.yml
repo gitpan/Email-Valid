@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Email-Valid
-version:             0.177
+version:             0.178
 abstract:            ~
 license:             perl
 generated_by:        ExtUtils::MakeMaker version 6.31
