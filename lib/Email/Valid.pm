@@ -1,15 +1,17 @@
 package Email::Valid;
-
+require 5.006;
 use strict;
+use warnings;
 use vars qw( $VERSION $RFC822PAT %AUTOLOAD $AUTOLOAD $NSLOOKUP_PAT
              @NSLOOKUP_PATHS $Details $Resolver $Nslookup_Path 
              $DNS_Method $TLD $Debug );
+
 use Carp;
 use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.180';
+$VERSION = '0.181';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -160,7 +162,7 @@ sub _nslookup_query {
     return 1;
   } else {
     # phew, we're not on Windows!
-    if (my $fh = new IO::File '-|') {
+    if (my $fh = IO::File->new('-|')) {
       my $response = <$fh>;
       print STDERR $response if $Debug;
       close $fh;

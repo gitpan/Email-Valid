@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Email-Valid
-version:            0.180
+version:            0.181
 abstract:           ~
 author:  []
 license:            perl
@@ -9,9 +9,10 @@ configure_requires:
     ExtUtils::MakeMaker:  0
 requires:
     Mail::Address:  0
-    Net::DNS:       0
+    perl:           5.006
+    Test::More:     0
 resources:
-    Repository:  http://github.com/rjbs/email-valid
+    repository:  http://github.com/rjbs/email-valid
 no_index:
     directory:
         - t
