@@ -1,14 +1,17 @@
 --- #YAML:1.0
 name:               Email-Valid
-version:            0.181
+version:            0.182
 abstract:           ~
 author:  []
 license:            perl
 distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
 requires:
     Mail::Address:  0
+    Net::DNS:       0
     perl:           5.006
     Test::More:     0
 resources:
@@ -17,7 +20,7 @@ no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.48
+generated_by:       ExtUtils::MakeMaker version 6.50
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4
