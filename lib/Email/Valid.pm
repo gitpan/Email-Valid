@@ -11,7 +11,9 @@ use IO::File;
 use Mail::Address;
 use File::Spec;
 
-$VERSION = '0.182';
+use bytes;
+
+$VERSION = '0.183_001';
 
 %AUTOLOAD = (
   fqdn     => 1,
