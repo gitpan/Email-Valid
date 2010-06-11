@@ -6,6 +6,7 @@ Makefile.PL
 t/valid.t
 t/pod.t
 t/pod-coverage.t
+t/resolver.t
 t/utf-8.t
 LICENSE
 META.yml                                 Module meta-data (added by MakeMaker)

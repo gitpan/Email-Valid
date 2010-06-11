@@ -13,7 +13,7 @@ use File::Spec;
 
 use bytes;
 
-$VERSION = '0.183_001';
+$VERSION = '0.184';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -28,6 +28,16 @@ $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
 
 # initialize if already loaded, better in prefork mod_perl environment
 $DNS_Method = defined $Net::DNS::VERSION ? 'Net::DNS' : '';
+unless ($DNS_Method) {
+    __PACKAGE__->_select_dns_method;
+}
+
+# initialize $Resolver if necessary
+if ($DNS_Method eq 'Net::DNS') {
+    unless (defined $Resolver) {
+        $Resolver = Net::DNS::Resolver->new;
+    }
+}
 
 sub new {
   my $class   = shift;
