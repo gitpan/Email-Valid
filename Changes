@@ -1,5 +1,17 @@
 Revision history for Perl extension Email::Valid.
 
+0.185     2011-08-11
+          do not die in t/valid.t when testing for working DNS
+          (address RT #70157, thanks, Alexey Tourbin)
+
+          avoid a pointless warning (mentioned in RT #68312)
+
+          check TLD validity before MX records
+          (address RT #32237, thanks, meyerdigital)
+
+          reject addresses with non-ASCII characters
+          (address RT #50230, thanks, ferreira)
+
 0.184     2010-06-10
           initialize Net::DNS resolver earlier
           (address RT #56828, thanks mschout @ github)

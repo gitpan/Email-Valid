@@ -9,4 +9,5 @@ t/pod-coverage.t
 t/resolver.t
 t/utf-8.t
 LICENSE
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)
