@@ -14,7 +14,7 @@ use Scalar::Util 'blessed';
 
 use bytes;
 
-$VERSION = '0.186';
+$VERSION = '0.187';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -22,6 +22,7 @@ $VERSION = '0.186';
   mxcheck  => 1,
   tldcheck => 1,
   local_rules => 1,
+  localpart => 1,
 );
 
 $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
@@ -57,7 +58,9 @@ sub _initialize {
   $self->{tldcheck}    = 0;
   $self->{fudge}       = 0;
   $self->{fqdn}        = 1;
+  $self->{allow_ip}    = 1;
   $self->{local_rules} = 0;
+  $self->{localpart}   = 1;
   $self->{details}     = $Details = undef;
 }
 
@@ -280,6 +283,14 @@ sub _local_rules {
   1;
 }
 
+sub _valid_local_part {
+  my ($self, $localpart) = @_;
+
+  return 0 unless $localpart and length $localpart <= 64;
+
+  return 1;
+}
+
 sub _valid_domain_parts {
   my ($self, $string) = @_;
 
@@ -322,15 +333,29 @@ sub address {
 
   $addr or return $self->details('rfc822'); # This should never happen
 
+  if (length($addr->address) > 254) {
+    return $self->details('address_too_long');
+  }
+
   if ($args{local_rules}) {
     $self->_local_rules( $addr->user, $addr->host )
       or return $self->details('local_rules');
   }
 
-  if ($args{fqdn}) {
-    no warnings 'uninitialized'; # valid domain parts might return undef
-    $self->_valid_domain_parts($addr->host) > 1
-      or return $self->details('fqdn');
+  if ($args{localpart}) {
+    $self->_valid_local_part($addr->user) > 0
+      or return $self->details('localpart');
+  }
+
+  my $ip_ok = $args{allow_ip} && $addr->host =~ /\A\[
+    (?:[0-9]{1,3}\.){3}[0-9]{1,3}
+  /x;
+
+  if (! $ip_ok && $args{fqdn}) {
+    my $domain_parts = $self->_valid_domain_parts($addr->host);
+
+    return $self->details('fqdn')
+      unless $ip_ok || ($domain_parts && $domain_parts > 1);
   }
 
   if ($args{tldcheck}) {
@@ -511,6 +536,7 @@ individual methods below of details.
  -tldcheck
  -fudge
  -fqdn
+ -allow_ip
  -local_rules
 
 =item mx ( <ADDRESS>|<DOMAIN> )
@@ -545,10 +571,24 @@ common addressing errors.  Currently, this results in the removal of
 spaces in AOL addresses, and the conversion of commas to periods in
 Compuserve addresses.  The default is false.
 
+=item allow_ip ( <TRUE>|<FALSE> )
+
+Specifies whether a "domain literal" is acceptable as the domain part.  That
+means addresses like:  C<rjbs@[1.2.3.4]>
+
+The checking for the domain literal is stricter than the RFC and looser than
+checking for a valid IP address, I<but this is subject to change>.
+
+The default is true.
+
 =item fqdn ( <TRUE>|<FALSE> )
 
 Species whether addresses passed to address() must contain a fully
 qualified domain name (FQDN).  The default is true.
+
+B<Please note!>  FQDN checks only occur for non-domain-literals.  In other
+words, if you have set C<allow_ip> and the address ends in a bracketed IP
+address, the FQDN check will not occur.
 
 =item local_rules ( <TRUE>|<FALSE> )
 
@@ -582,6 +622,7 @@ If the last call to address() returned undef, you can call this
 method to determine why it failed.  Possible values are:
 
  rfc822
+ localpart
  local_rules
  fqdn
  mxcheck

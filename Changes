@@ -1,5 +1,13 @@
 Revision history for Perl extension Email::Valid.
 
+0.187     2012-01-27
+          addresses in the form rjbs@[1.2.3.4] are now (correctly) considered
+          valid; this can be disabled with the -allow_ip option
+          (this resolves RT #48398)
+
+          check email address length and localpart length (thanks, Steve
+          Bertrand!)
+
 0.186     2012-01-22
           use blessed($x) instead of wrapping an ->isa called in eval{}; this
           patch (thanks, Felipe Bergo!) was submitted to avoid problems with

@@ -1,7 +1,7 @@
 #!perl
 use strict;
 
-use Test::More tests => 24;
+use Test::More tests => 31;
 
 BEGIN {
   use_ok('Email::Valid');
@@ -53,6 +53,27 @@ is(
   'fred&barney@stonehenge.com',
   "comments nicely dropped from an address",
 );
+
+is ($v->address(-address => 'user@example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+  undef,
+  "address with > 254 chars fails",
+);
+
+is($v->details, 'address_too_long', "details say address is too long");
+
+is(
+  $v->address(-address => 'somebody@example.com', -localpart => 1),
+  'somebody@example.com',
+  "localpart with 64 chars or less is valid",
+);
+
+is(
+  $v->address(-address => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com', -localpart => 1),
+  undef,
+  "localpart with 64 chars or more fails",
+);
+
+is($v->details, 'localpart', "details are localpart");
 
 ok(
   $v->address('somebody@ example.com'),
@@ -114,6 +135,16 @@ SKIP: {
     'blort@will-never-exist.pobox.com, with mxcheck, is invalid',
   ) or diag "was using $Email::Valid::DNS_Method for dns resolution";
 }
+
+ok(
+  $v->address(-address => 'rjbs@[127.0.0.1]'),
+  'a domain literal address is okay',
+);
+
+ok(
+  ! $v->address(-address => 'rjbs@[127.0.0.1]', -allow_ip => 0),
+  'a domain literal address is not okay if we say -allow_ip=>0',
+);
 
 SKIP: {
   skip "tests require Net::Domain::TLD 1.65", 3
