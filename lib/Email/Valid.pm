@@ -14,7 +14,7 @@ use Scalar::Util 'blessed';
 
 use bytes;
 
-$VERSION = '0.187';
+$VERSION = '0.188';
 
 %AUTOLOAD = (
   fqdn     => 1,
@@ -286,7 +286,7 @@ sub _local_rules {
 sub _valid_local_part {
   my ($self, $localpart) = @_;
 
-  return 0 unless $localpart and length $localpart <= 64;
+  return 0 unless defined $localpart and length $localpart <= 64;
 
   return 1;
 }
