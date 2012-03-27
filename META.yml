@@ -25,4 +25,4 @@ requires:
   perl: 5.006
 resources:
   repository: http://github.com/rjbs/email-valid
-version: 0.189
+version: 0.190
