@@ -1,28 +1,203 @@
 ---
-abstract: unknown
+abstract: 'Check validity of Internet email addresses'
 author:
-  - unknown
+  - 'Maurice Aubrey <maurice@hevanet.com>'
 build_requires:
-  ExtUtils::MakeMaker: 0
-configure_requires:
-  ExtUtils::MakeMaker: 0
-dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.120351'
+  Capture::Tiny: 0
+  Test::More: 0.96
+  blib: 0
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.300037, CPAN::Meta::Converter version 2.132140'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: Email-Valid
-no_index:
-  directory:
-    - t
-    - inc
 requires:
+  Carp: 0
+  File::Spec: 0
+  IO::CaptureOutput: 0
+  IO::File: 0
   Mail::Address: 0
   Net::DNS: 0
+  Net::Domain::TLD: 1.65
   Scalar::Util: 0
-  Test::More: 0
   perl: 5.006
+  strict: 0
+  warnings: 0
 resources:
-  repository: http://github.com/rjbs/email-valid
-version: 0.190
+  bugtracker: https://github.com/rjbs/Email-Valid/issues
+  homepage: https://github.com/rjbs/Email-Valid
+  repository: https://github.com/rjbs/Email-Valid.git
+version: 1.191
+x_Dist_Zilla:
+  perl:
+    version: 5.019003
+  plugins:
+    -
+      class: Dist::Zilla::Plugin::Git::GatherDir
+      name: '@Filter/Git::GatherDir'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::CheckPrereqsIndexed
+      name: '@Filter/CheckPrereqsIndexed'
+      version: 0.009
+    -
+      class: Dist::Zilla::Plugin::CheckExtraTests
+      name: '@Filter/CheckExtraTests'
+      version: 0.011
+    -
+      class: Dist::Zilla::Plugin::PruneCruft
+      name: '@Filter/@Filter/PruneCruft'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::ManifestSkip
+      name: '@Filter/@Filter/ManifestSkip'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::MetaYAML
+      name: '@Filter/@Filter/MetaYAML'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::License
+      name: '@Filter/@Filter/License'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::Readme
+      name: '@Filter/@Filter/Readme'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::ExecDir
+      name: '@Filter/@Filter/ExecDir'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::ShareDir
+      name: '@Filter/@Filter/ShareDir'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::Manifest
+      name: '@Filter/@Filter/Manifest'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::TestRelease
+      name: '@Filter/@Filter/TestRelease'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::ConfirmRelease
+      name: '@Filter/@Filter/ConfirmRelease'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::UploadToCPAN
+      name: '@Filter/@Filter/UploadToCPAN'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::AutoPrereqs
+      name: '@Filter/AutoPrereqs'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::Git::NextVersion
+      name: '@Filter/Git::NextVersion'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::PkgVersion
+      name: '@Filter/PkgVersion'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::MetaConfig
+      name: '@Filter/MetaConfig'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::MetaJSON
+      name: '@Filter/MetaJSON'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::NextRelease
+      name: '@Filter/NextRelease'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::Test::ChangesHasContent
+      name: '@Filter/Test::ChangesHasContent'
+      version: 0.006
+    -
+      class: Dist::Zilla::Plugin::PodSyntaxTests
+      name: '@Filter/PodSyntaxTests'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::ReportVersions::Tiny
+      name: '@Filter/ReportVersions::Tiny'
+      version: 1.09
+    -
+      class: Dist::Zilla::Plugin::Test::Compile
+      config:
+        Dist::Zilla::Plugin::Test::Compile:
+          module_finder:
+            - ':InstallModules'
+          script_finder:
+            - ':ExecFiles'
+      name: '@Filter/Test::Compile'
+      version: 2.018
+    -
+      class: Dist::Zilla::Plugin::Prereqs
+      config:
+        Dist::Zilla::Plugin::Prereqs:
+          phase: test
+          type: requires
+      name: '@Filter/TestMoreWithSubtests'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::PodWeaver
+      name: '@Filter/PodWeaver'
+      version: 3.101642
+    -
+      class: Dist::Zilla::Plugin::GithubMeta
+      name: '@Filter/GithubMeta'
+      version: 0.30
+    -
+      class: Dist::Zilla::Plugin::Git::Check
+      name: '@Filter/@Git/Check'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::Git::Commit
+      name: '@Filter/@Git/Commit'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::Git::Tag
+      name: '@Filter/@Git/Tag'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::Git::Push
+      name: '@Filter/@Git/Push'
+      version: 2.014
+    -
+      class: Dist::Zilla::Plugin::MakeMaker::Runner
+      name: MakeMaker::Runner
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':InstallModules'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':IncModules'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':TestFiles'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':ExecFiles'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':ShareFiles'
+      version: 4.300037
+    -
+      class: Dist::Zilla::Plugin::FinderCode
+      name: ':MainModule'
+      version: 4.300037
+  zilla:
+    class: Dist::Zilla::Dist::Builder
+    config:
+      is_trial: 0
+    version: 4.300037

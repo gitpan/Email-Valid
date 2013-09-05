@@ -1,6 +1,13 @@
-DESCRIPTION
 
-  This module determines whether an email address is well-formed, and
-  optionally, whether a mail host exists for the domain or whether
-  the top level domain of the email address is valid.  
+
+This archive contains the distribution Email-Valid,
+version 1.191:
+
+  Check validity of Internet email addresses
+
+This software is copyright (c) 1998 by Maurice Aubrey.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 

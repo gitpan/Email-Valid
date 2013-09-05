@@ -1,13 +1,17 @@
 Changes
-lib/Email/Valid.pm
-README
+LICENSE
 MANIFEST
+META.json
+META.yml
 Makefile.PL
-t/valid.t
-t/pod.t
-t/pod-coverage.t
+README
+dist.ini
+lib/Email/Valid.pm
+t/00-compile.t
+t/000-report-versions-tiny.t
 t/resolver.t
 t/utf-8.t
-LICENSE
-META.yml                                 Module YAML meta-data (added by MakeMaker)
-META.json                                Module JSON meta-data (added by MakeMaker)
+t/valid.t
+xt/release/changes_has_content.t
+xt/release/pod-syntax.t
+xt/sayers-corpus.t
