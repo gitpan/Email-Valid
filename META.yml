@@ -29,7 +29,7 @@ resources:
   bugtracker: https://github.com/rjbs/Email-Valid/issues
   homepage: https://github.com/rjbs/Email-Valid
   repository: https://github.com/rjbs/Email-Valid.git
-version: 1.191
+version: 1.192
 x_Dist_Zilla:
   perl:
     version: 5.019003

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 package Email::Valid;
 {
-  $Email::Valid::VERSION = '1.191';
+  $Email::Valid::VERSION = '1.192';
 }
 # ABSTRACT: Check validity of Internet email addresses
 our (
@@ -507,7 +507,7 @@ Email::Valid - Check validity of Internet email addresses
 
 =head1 VERSION
 
-version 1.191
+version 1.192
 
 =head1 SYNOPSIS
 

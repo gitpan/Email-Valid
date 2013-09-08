@@ -55,7 +55,7 @@
          "web" : "https://github.com/rjbs/Email-Valid"
       }
    },
-   "version" : "1.191",
+   "version" : "1.192",
    "x_Dist_Zilla" : {
       "perl" : {
          "version" : "5.019003"
