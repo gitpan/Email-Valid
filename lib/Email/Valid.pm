@@ -2,7 +2,7 @@ require 5.006;
 use strict;
 use warnings;
 package Email::Valid;
-$Email::Valid::VERSION = '1.193';
+$Email::Valid::VERSION = '1.194';
 # ABSTRACT: Check validity of Internet email addresses
 our (
   $RFC822PAT,
@@ -719,7 +719,7 @@ Email::Valid - Check validity of Internet email addresses
 
 =head1 VERSION
 
-version 1.193
+version 1.194
 
 =head1 SYNOPSIS
 
