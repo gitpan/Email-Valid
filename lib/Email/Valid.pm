@@ -2,7 +2,7 @@ require 5.006;
 use strict;
 use warnings;
 package Email::Valid;
-$Email::Valid::VERSION = '1.194';
+$Email::Valid::VERSION = '1.195';
 # ABSTRACT: Check validity of Internet email addresses
 our (
   $RFC822PAT,
@@ -146,7 +146,7 @@ sub _net_dns_query {
 
   my $packet = $Resolver->send($host, 'MX') or croak $Resolver->errorstring;
   if ($packet->header->ancount) {
-    my @mx_entries = grep { $_->{'type'} eq 'MX' } $packet->answer;
+    my @mx_entries = grep { $_->type eq 'MX' } $packet->answer;
     if(@mx_entries) {
         my $mx = ($mx_entries[0])->exchange;
         if ($mx eq '.' or $mx eq '') {
@@ -719,7 +719,7 @@ Email::Valid - Check validity of Internet email addresses
 
 =head1 VERSION
 
-version 1.194
+version 1.195
 
 =head1 SYNOPSIS
 
